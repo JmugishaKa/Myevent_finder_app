@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Local Event Finder</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <h1>Local Event Finder</h1>
+    <form id="searchForm" method="post">
+        <input type="text" name="city" placeholder="Enter city" required>
+        <input type="text" name="event_type" placeholder="Event type (optional)">
+        <select name="sort_by">
+            <option value="name">Sort by Name</option>
+            <option value="date">Sort by Date</option>
+        </select>
+        <button type="submit">Search</button>
+    </form>
+    <div id="results">
+        {% if error %}
+            <p class="error">{{ error }}</p>
+        {% endif %}
+        {% if events %}
+            <h2>Events:</h2>
+            <ul id="eventList">
+            {% for event in events %}
+                <li>{{ event.name }} - {{ event.dates.start.localDate|default('TBD') }}</li>
+            {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

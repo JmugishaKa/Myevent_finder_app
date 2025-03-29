@@ -28,7 +28,8 @@ def fetch_events(city, event_type=None):
         eb_params["categories"] = event_type
     try:
         response = requests.get(EB_BASE_URL, headers=eb_headers, params=eb_params)
-        eb_events = [{"name": e["name"]["text"], "dates": {"start": {"localDate": e["start"]["local"][:10]}}} for e in response.json().get("events", [])]
+        eb_events = [{"name": e["name"]["text"], "dates": {"start": {"localDate": e["start"]["local"][:10]}}} 
+                     for e in response.json().get("events", [])]
         events.extend(eb_events)
     except Exception as e:
         print(f"Eventbrite error: {e}")
