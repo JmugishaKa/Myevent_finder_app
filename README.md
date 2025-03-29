@@ -2,7 +2,7 @@
 CLI locally, web app deployed.
 
 # Description
-This is an app that tracks down social events frm different places, which for now we can track on ticketmaster and eventbrite, targeting users who like grand events.
+This is an app that tracks down social events from different places, which for now we can track on ticketmaster and eventbrite, targeting users who like grand events.
 
 ## Local Setup (CLI)
 1. Clone: `git clone url`
