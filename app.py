@@ -19,19 +19,20 @@ def fetch_events(city, event_type=None):
     try:
         response = requests.get(TM_BASE_URL, params=tm_params)
         events.extend(response.json().get("_embedded", {}).get("events", []))
-    except:
-        pass
+    except Exception as e:
+        print(f"Ticketmaster error: {e}")
     # Eventbrite
     eb_headers = {"Authorization": f"Bearer {EVENTBRITE_API_KEY}"}
     eb_params = {"q": city.title()}
     if event_type:
-        eb_params["categories"] = event_type  # Note: Eventbrite uses category IDs, simplify for now
+        eb_params["categories"] = event_type
     try:
         response = requests.get(EB_BASE_URL, headers=eb_headers, params=eb_params)
-        eb_events = [{"name": e["name"]["text"], "dates": {"start": {"localDate": e["start"]["local"][:10]}}} for e in response.json().get("events", [])]
+        eb_events = [{"name": e["name"]["text"], "dates": {"start": {"localDate": e["start"]["local"][:10]}}} 
+                     for e in response.json().get("events", [])]
         events.extend(eb_events)
-    except:
-        pass
+    except Exception as e:
+        print(f"Eventbrite error: {e}")
     return events
 
 @app.route("/", methods=["GET", "POST"])
