@@ -14,7 +14,9 @@ This is an app that tracks down social events from different places, which for n
 - Web01/Web02: Clone, install Python/Flask, run `gunicorn --bind 0.0.0.0:5000 app:app`.
 - Lb01: Install Nginx, configure upstream, restart.
 - Access: `http://lb01_ip`
-
+# Example of Places (depending on what the api can find).
+1. New York,
+2. 
 ## API
 - Ticketmaster Discovery API v2: https://developer.ticketmaster.com/
 - eventbrite API: https://developer.eventbrite.com
