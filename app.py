@@ -12,7 +12,6 @@ EB_BASE_URL = "https://www.eventbriteapi.com/v3/events/search/"
 
 def fetch_events(city, event_type=None):
     events = []
-    # Ticketmaster
     tm_params = {"apikey": TICKETMASTER_API_KEY, "city": city.title(), "size": 10}
     if event_type:
         tm_params["classificationName"] = event_type
@@ -21,7 +20,6 @@ def fetch_events(city, event_type=None):
         events.extend(response.json().get("_embedded", {}).get("events", []))
     except Exception as e:
         print(f"Ticketmaster error: {e}")
-    # Eventbrite
     eb_headers = {"Authorization": f"Bearer {EVENTBRITE_API_KEY}"}
     eb_params = {"q": city.title()}
     if event_type:

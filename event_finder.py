@@ -1,7 +1,9 @@
+from flask import Flask, request, render_template
 import requests
 import os
 from dotenv import load_dotenv
 
+app = Flask(__name__, static_folder="static", template_folder="templates")
 load_dotenv()
 TICKETMASTER_API_KEY = os.getenv("TICKETMASTER_API_KEY")
 EVENTBRITE_API_KEY = os.getenv("EVENTBRITE_API_KEY")
@@ -38,28 +40,30 @@ def fetch_events(city, event_type=None):
         eb_params["categories"] = event_type
     try:
         response = requests.get(EB_BASE_URL, headers=eb_headers, params=eb_params)
-        eb_events = [{"name": e["name"]["text"], "dates": {"start": {"localDate": e["start"]["local"][:10]}}} for e in response.json().get("events", [])]
+        eb_events = [{"name": e["name"]["text"], "dates": {"start": {"localDate": e["start"]["local"][:10]}}} 
+                     for e in response.json().get("events", [])]
         events.extend(eb_events)
     except Exception as e:
         print(f"Eventbrite error: {e}")
     return events
 >>>>>>> bbb80adbfc8ec8e2cf85c5acd8eb4f3f6a1bfc47
 
-while True:
-    city = input("Enter city (or 'quit'): ").strip()
-    if city.lower() == "quit":
-        break
-    event_type = input("Event type (optional): ").strip() or None
-    sort_by = input("Sort by (name/date): ").strip()
-    events = fetch_events(city, event_type)
-    if not events:
-        print("No events found.")
-    else:
-        if sort_by == "date":
+@app.route("/", methods=["GET", "POST"])
+def index():
+    events = []
+    error = None
+    if request.method == "POST":
+        city = request.form.get("city")
+        event_type = request.form.get("event_type") or None
+        sort_by = request.form.get("sort_by", "name")
+        events = fetch_events(city, event_type)
+        if not events:
+            error = "No events found."
+        elif sort_by == "date":
             events.sort(key=lambda x: x.get("dates", {}).get("start", {}).get("localDate", "9999-12-31"))
         else:
             events.sort(key=lambda x: x.get("name", "").lower())
-        print("\nEvents:")
-        for i, event in enumerate(events, 1):
-            date = event.get("dates", {}).get("start", {}).get("localDate", "TBD")
-            print(f"{i}. {event['name']} - {date}")
+    return render_template("index.html", events=events, error=error)
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
