@@ -1,23 +1,38 @@
-from flask import Flask, request, render_template_string
+from flask import Flask, request, render_template
 import requests
 import os
 from dotenv import load_dotenv
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="static", template_folder="templates")
 load_dotenv()
-API_KEY = os.getenv("TICKETMASTER_API_KEY")
-BASE_URL = "https://app.ticketmaster.com/discovery/v2/events.json"
+TICKETMASTER_API_KEY = os.getenv("TICKETMASTER_API_KEY")
+EVENTBRITE_API_KEY = os.getenv("EVENTBRITE_API_KEY")
+TM_BASE_URL = "https://app.ticketmaster.com/discovery/v2/events.json"
+EB_BASE_URL = "https://www.eventbriteapi.com/v3/events/search/"
 
 def fetch_events(city, event_type=None):
-    params = {"apikey": API_KEY, "city": city, "size": 10}
+    events = []
+    # Ticketmaster
+    tm_params = {"apikey": TICKETMASTER_API_KEY, "city": city.title(), "size": 10}
     if event_type:
-        params["classificationName"] = event_type
+        tm_params["classificationName"] = event_type
     try:
-        response = requests.get(BASE_URL, params=params)
-        response.raise_for_status()
-        return response.json().get("_embedded", {}).get("events", [])
-    except requests.exceptions.RequestException:
-        return []
+        response = requests.get(TM_BASE_URL, params=tm_params)
+        events.extend(response.json().get("_embedded", {}).get("events", []))
+    except Exception as e:
+        print(f"Ticketmaster error: {e}")
+    # Eventbrite
+    eb_headers = {"Authorization": f"Bearer {EVENTBRITE_API_KEY}"}
+    eb_params = {"q": city.title()}
+    if event_type:
+        eb_params["categories"] = event_type
+    try:
+        response = requests.get(EB_BASE_URL, headers=eb_headers, params=eb_params)
+        eb_events = [{"name": e["name"]["text"], "dates": {"start": {"localDate": e["start"]["local"][:10]}}} for e in response.json().get("events", [])]
+        events.extend(eb_events)
+    except Exception as e:
+        print(f"Eventbrite error: {e}")
+    return events
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -34,36 +49,7 @@ def index():
             events.sort(key=lambda x: x.get("dates", {}).get("start", {}).get("localDate", "9999-12-31"))
         else:
             events.sort(key=lambda x: x.get("name", "").lower())
-
-    return render_template_string("""
-        <!DOCTYPE html>
-        <html>
-        <head><title>Local Event Finder</title>
-        <style>body { font-family: Arial, sans-serif; padding: 20px; }</style>
-        </head>
-        <body>
-            <h1>Local Event Finder</h1>
-            <form method="post">
-                <input type="text" name="city" placeholder="Enter city" required>
-                <input type="text" name="event_type" placeholder="Event type (optional)">
-                <select name="sort_by">
-                    <option value="name">Sort by Name</option>
-                    <option value="date">Sort by Date</option>
-                </select>
-                <button type="submit">Search</button>
-            </form>
-            {% if error %}<p>{{ error }}</p>{% endif %}
-            {% if events %}
-                <h2>Events:</h2>
-                <ul>
-                {% for event in events %}
-                    <li>{{ event.name }} - {{ event.dates.start.localDate|default('TBD') }}</li>
-                {% endfor %}
-                </ul>
-            {% endif %}
-        </body>
-        </html>
-    """, events=events, error=error)
+    return render_template("index.html", events=events, error=error)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

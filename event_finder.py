@@ -1,70 +1,52 @@
 import requests
 import os
 from dotenv import load_dotenv
-from datetime import datetime
 
-# Load API key
 load_dotenv()
-API_KEY = os.getenv("TICKETMASTER_API_KEY")
-BASE_URL = "https://app.ticketmaster.com/discovery/v2/events.json"
+TICKETMASTER_API_KEY = os.getenv("TICKETMASTER_API_KEY")
+EVENTBRITE_API_KEY = os.getenv("EVENTBRITE_API_KEY")
+TM_BASE_URL = "https://app.ticketmaster.com/discovery/v2/events.json"
+EB_BASE_URL = "https://www.eventbriteapi.com/v3/events/search/"
 
 def fetch_events(city, event_type=None):
-    """Fetch events from Ticketmaster API."""
-    params = {
-        "apikey": API_KEY,
-        "city": city,
-        "size": 10,  # Limit to 10 events
-    }
+    events = []
+    # Ticketmaster
+    tm_params = {"apikey": TICKETMASTER_API_KEY, "city": city.title(), "size": 10}
     if event_type:
-        params["classificationName"] = event_type
-
+        tm_params["classificationName"] = event_type
     try:
-        response = requests.get(BASE_URL, params=params)
-        response.raise_for_status()
-        data = response.json()
-        return data.get("_embedded", {}).get("events", [])
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching events: {e}")
-        return []
+        response = requests.get(TM_BASE_URL, params=tm_params)
+        events.extend(response.json().get("_embedded", {}).get("events", []))
+    except Exception as e:
+        print(f"Ticketmaster error: {e}")
+    # Eventbrite
+    eb_headers = {"Authorization": f"Bearer {EVENTBRITE_API_KEY}"}
+    eb_params = {"q": city.title()}
+    if event_type:
+        eb_params["categories"] = event_type
+    try:
+        response = requests.get(EB_BASE_URL, headers=eb_headers, params=eb_params)
+        eb_events = [{"name": e["name"]["text"], "dates": {"start": {"localDate": e["start"]["local"][:10]}}} for e in response.json().get("events", [])]
+        events.extend(eb_events)
+    except Exception as e:
+        print(f"Eventbrite error: {e}")
+    return events
 
-def display_events(events, sort_by="name"):
-    """Display events sorted by name or date."""
+while True:
+    city = input("Enter city (or 'quit'): ").strip()
+    if city.lower() == "quit":
+        break
+    event_type = input("Event type (optional): ").strip() or None
+    sort_by = input("Sort by (name/date): ").strip()
+    events = fetch_events(city, event_type)
     if not events:
         print("No events found.")
-        return
-
-    # Sort events
-    if sort_by == "date":
-        events.sort(key=lambda x: x.get("dates", {}).get("start", {}).get("localDate", "9999-12-31") or "9999-12-31")
     else:
-        events.sort(key=lambda x: x.get("name", "").lower())
-
-    print("\nEvents:")
-    for i, event in enumerate(events, 1):
-        name = event.get("name", "Unknown Event")
-        date = event.get("dates", {}).get("start", {}).get("localDate", "TBD")
-        print(f"{i}. {name} - Date: {date}")
-
-def main():
-    """Main CLI loop."""
-    print("Welcome to Local Event Finder!")
-    while True:
-        city = input("\nEnter a city (or 'quit' to exit): ").strip()
-        if city.lower() == "quit":
-            print("Goodbye!")
-            break
-
-        event_type = input("Enter event type (e.g., music, sports) or press Enter to skip: ").strip() or None
-        events = fetch_events(city, event_type)
-
-        if events:
-            sort_by = input("Sort by (name/date): ").strip().lower() or "name"
-            if sort_by not in ["name", "date"]:
-                print("Invalid sort option. Using 'name'.")
-                sort_by = "name"
-            display_events(events, sort_by)
+        if sort_by == "date":
+            events.sort(key=lambda x: x.get("dates", {}).get("start", {}).get("localDate", "9999-12-31"))
         else:
-            print("Try another city or check your connection.")
-
-if __name__ == "__main__":
-    main()
+            events.sort(key=lambda x: x.get("name", "").lower())
+        print("\nEvents:")
+        for i, event in enumerate(events, 1):
+            date = event.get("dates", {}).get("start", {}).get("localDate", "TBD")
+            print(f"{i}. {event['name']} - {date}")
